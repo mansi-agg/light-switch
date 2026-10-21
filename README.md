@@ -18,7 +18,7 @@ A small browser extension for Chrome and Arc that lets you switch **any website*
 
 Light Switch isn't on the Chrome Web Store yet, so it's installed from its folder:
 
-1. Download this project (green **Code** button → **Download ZIP**) and unzip it. Keep the folder somewhere permanent, such as Documents.
+1. Download this project (green **Code** button → **Download ZIP**) and unzip it. 
 2. Open `chrome://extensions` (Chrome) or `arc://extensions` (Arc).
 3. Turn on **Developer mode** (top-right switch).
 4. Click **Load unpacked** and choose the unzipped folder (the one that contains `manifest.json`).
