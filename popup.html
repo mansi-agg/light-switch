@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Light Switch</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #1d1d1f;
+      --muted: #6e6e73;
+      --track: #ececef;
+      --thumb: #ffffff;
+      --accent: #0a66ff;
+      color-scheme: light dark;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1e1e20;
+        --text: #f2f2f4;
+        --muted: #a1a1a6;
+        --track: #2e2e32;
+        --thumb: #48484d;
+        --accent: #5b9bff;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      width: 280px;
+      padding: 16px;
+      background: var(--bg);
+      color: var(--text);
+      font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    h1 { margin: 0; font-size: 15px; font-weight: 600; }
+    .site {
+      margin: 2px 0 14px;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .switch {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
+      padding: 4px;
+      border-radius: 10px;
+      background: var(--track);
+    }
+    .switch button {
+      padding: 8px 0;
+      border: 0;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .switch button:hover:not(:disabled) { color: var(--text); }
+    .switch button[aria-pressed="true"] {
+      background: var(--thumb);
+      color: var(--text);
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+    }
+    .switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+    .switch button:disabled { cursor: default; opacity: 0.5; }
+    .hint { min-height: 1.4em; margin: 12px 0 0; color: var(--muted); }
+    .hint:empty { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Light Switch</h1>
+  <p class="site" id="site">&nbsp;</p>
+  <div class="switch" role="group" aria-label="Appearance for this site">
+    <button data-mode="off" aria-pressed="false">Off</button>
+    <button data-mode="dark" aria-pressed="false">Dark</button>
+    <button data-mode="light" aria-pressed="false">Light</button>
+  </div>
+  <p class="hint" id="hint" role="status"></p>
+  <script src="popup.js"></script>
+</body>
+</html>

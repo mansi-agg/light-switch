@@ -1,0 +1,21 @@
+/*
+ * Light Switch styles. These rules do nothing until content.js marks the page
+ * with data-light-switch="flip", so pages you haven't switched are never touched.
+ */
+
+/* Flip every colour on the page. hue-rotate keeps reds red and blues blue. */
+html[data-light-switch="flip"] {
+  filter: invert(1) hue-rotate(180deg) !important;
+  background-color: var(--light-switch-base, #fff) !important;
+}
+
+/* Flip photos, videos, embeds and charts back so they keep their real colours. */
+html[data-light-switch="flip"] :is(img, video, canvas, iframe, embed, object, [data-light-switch-media]) {
+  filter: invert(1) hue-rotate(180deg) !important;
+}
+
+/* ...but don't flip them twice when one sits inside another. */
+html[data-light-switch="flip"] :is(img, video, canvas, iframe, embed, object, [data-light-switch-media])
+  :is(img, video, canvas, iframe, embed, object, [data-light-switch-media]) {
+  filter: none !important;
+}
