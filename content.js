@@ -12,7 +12,8 @@
   const MODE_KEY = `mode:${host}`; // 'off' | 'dark' | 'light', set by the popup
   const LOOK_KEY = `look:${host}`; // how the page looks on its own, remembered between visits
   const FLIP_ATTR = 'data-light-switch';
-  const MEDIA_ATTR = 'data-light-switch-media';
+  const MEDIA_ATTR = 'data-light-switch-media'; // keep original colours
+  const PAGE_ATTR = 'data-light-switch-page'; // inside a kept area, but follows the page
 
   let mode = 'off';
   let look = null; // { dark: boolean, base: 'rgb(r, g, b)' }
@@ -45,13 +46,17 @@
   const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
   probe.canvas.width = probe.canvas.height = 1;
 
+  const colorCache = new Map();
   function toRgba(color) {
+    if (colorCache.has(color)) return colorCache.get(color);
     probe.clearRect(0, 0, 1, 1);
     probe.fillStyle = 'transparent';
     probe.fillStyle = color;
     probe.fillRect(0, 0, 1, 1);
     const [r, g, b, a] = probe.getImageData(0, 0, 1, 1).data;
-    return { r, g, b, a: a / 255 };
+    const rgba = { r, g, b, a: a / 255 };
+    colorCache.set(color, rgba);
+    return rgba;
   }
 
   function luminance({ r, g, b }) {
@@ -62,61 +67,74 @@
   const isDark = (c) => luminance(c) < 0.2;
   const css = ({ r, g, b }) => `rgb(${r}, ${g}, ${b})`;
 
-  // The first solid background colour behind an element, ignoring images and charts.
-  function backgroundBehind(el) {
-    const media = el.closest('svg, picture, video, img, canvas, iframe, embed, object');
-    for (let node = media ? media.parentElement : el; node; node = node.parentElement) {
-      const c = toRgba(getComputedStyle(node).backgroundColor);
-      if (c.a >= 0.5) return c;
-    }
-    return null;
+  // Covers the whole page (not just one panel or banner on it).
+  function isPageSized(el) {
+    if (el === document.body || el === root) return true;
+    const r = el.getBoundingClientRect();
+    const pageHeight = Math.max(root.scrollHeight, innerHeight);
+    return r.width >= innerWidth * 0.9 && r.height >= pageHeight * 0.8;
   }
 
+  // How the page looks comes from its own background: the first solid colour on
+  // something page-sized behind the middle of the screen. Panels and banners
+  // (like a dark hero section on a white site) don't count, so the answer
+  // doesn't change as you scroll.
   function detectLook() {
     if (!document.body) return null;
 
-    // The browser's own page colour, used when the site doesn't set one.
-    const prefersDark = matchMedia('(prefers-color-scheme: dark)').matches;
-    const schemeDark = getComputedStyle(root).colorScheme.includes('dark') &&
-      (prefersDark || !getComputedStyle(root).colorScheme.includes('light'));
-    const page = backgroundBehind(document.body) ??
-      (schemeDark ? { r: 18, g: 18, b: 18 } : { r: 255, g: 255, b: 255 });
-
-    // Sample a few spots across the screen and take a majority vote.
-    const samples = [];
-    for (const [x, y] of [[0.5, 0.5], [0.2, 0.2], [0.8, 0.2], [0.2, 0.8], [0.8, 0.8], [0.5, 0.05]]) {
-      const el = document.elementFromPoint(innerWidth * x, innerHeight * y);
-      const c = el && backgroundBehind(el);
-      if (c) samples.push(c);
+    const start = document.elementFromPoint(innerWidth / 2, innerHeight / 2) ?? document.body;
+    for (let node = start; node; node = node.parentElement) {
+      const c = toRgba(getComputedStyle(node).backgroundColor);
+      if (c.a >= 0.5 && isPageSized(node)) return { dark: isDark(c), base: css(c) };
     }
-    if (!samples.length) samples.push(page);
 
-    const dark = samples.filter(isDark).length > samples.length / 2;
-    const base = isDark(page) === dark ? page : samples.find((c) => isDark(c) === dark);
-    return { dark, base: css(base) };
+    // The site sets no background, so the browser's own page colour shows.
+    const scheme = getComputedStyle(root).colorScheme;
+    const dark = scheme.includes('dark') &&
+      (!scheme.includes('light') || matchMedia('(prefers-color-scheme: dark)').matches);
+    return { dark, base: dark ? 'rgb(18, 18, 18)' : 'rgb(255, 255, 255)' };
   }
 
-  // ---------- Keeping photos, charts and background pictures un-flipped ----------
+  // ---------- Keeping some parts of the page un-flipped ----------
+  //
+  // Everything tagged with MEDIA_ATTR is flipped back to its original colours:
+  // photos, charts, background pictures, and panels that already have the
+  // colour you asked for (a dark banner stays dark when you pick Dark).
 
   function tagMedia() {
-    const vw = innerWidth;
-    const vh = innerHeight;
-
     // Large drawings (charts, diagrams, illustrations). Small icons flip with the text.
     for (const svg of document.querySelectorAll(`svg:not(svg svg):not([${MEDIA_ATTR}])`)) {
       const r = svg.getBoundingClientRect();
       if (r.width >= 150 && r.height >= 100) svg.setAttribute(MEDIA_ATTR, '');
     }
 
-    // Elements that show a picture as their background, except page-sized wrappers.
+    const pageLum = luminance(toRgba(look.base));
     const all = document.body.getElementsByTagName('*');
     for (let i = 0; i < Math.min(all.length, 5000); i++) {
       const el = all[i];
-      if (el.hasAttribute(MEDIA_ATTR)) continue;
-      if (!getComputedStyle(el).backgroundImage.includes('url(')) continue;
-      const r = el.getBoundingClientRect();
-      if (r.width >= vw * 0.9 && r.height >= vh * 0.9) continue;
-      el.setAttribute(MEDIA_ATTR, '');
+      if (el.hasAttribute(MEDIA_ATTR) || el.hasAttribute(PAGE_ATTR)) continue;
+      const style = getComputedStyle(el);
+
+      const bg = toRgba(style.backgroundColor);
+      const lum = bg.a >= 0.5 ? luminance(bg) : null;
+
+      // Inside a kept panel, shapes painted the page's own colour (like a curved
+      // edge blending the panel into the page) still need to follow the page.
+      if (lum !== null && Math.abs(lum - pageLum) < 0.03 && el.parentElement?.closest(`[${MEDIA_ATTR}]`)) {
+        el.setAttribute(PAGE_ATTR, '');
+        continue;
+      }
+
+      const hasPicture = style.backgroundImage.includes('url(');
+      const alreadyMatches = lum !== null && (look.dark ? lum > 0.5 : lum < 0.1);
+      if ((hasPicture || alreadyMatches) && !isPageSized(el)) el.setAttribute(MEDIA_ATTR, '');
+    }
+  }
+
+  function untagMedia() {
+    for (const el of document.querySelectorAll(`[${MEDIA_ATTR}], [${PAGE_ATTR}]`)) {
+      el.removeAttribute(MEDIA_ATTR);
+      el.removeAttribute(PAGE_ATTR);
     }
   }
 
@@ -136,6 +154,7 @@
     if (loaded || !look) {
       const fresh = detectLook();
       if (fresh && (!look || fresh.dark !== look.dark || fresh.base !== look.base)) {
+        if (look && fresh.dark !== look.dark) untagMedia();
         look = fresh;
         chrome.storage.local.set({ [LOOK_KEY]: look });
         apply();

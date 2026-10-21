@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Light Switch",
   "version": "0.1.0",
-  "description": "Switch any website between light and dark mode without changing photos, videos or charts.",
+  "description": "Switch any website between light and dark mode.",
   "permissions": ["storage", "activeTab"],
   "action": {
     "default_title": "Light Switch",

@@ -16,7 +16,7 @@ async function explain(tabId) {
   try {
     const s = await chrome.tabs.sendMessage(tabId, { type: 'light-switch:status' });
     if (s.mode !== 'off' && !s.flipped && s.pageIsDark !== null) {
-      hint(`This site already looks ${s.mode}, so nothing needed changing.`);
+      hint(`This site looks like it is already in ${s.mode} mode, so nothing needs changing.`);
     } else {
       hint('');
     }

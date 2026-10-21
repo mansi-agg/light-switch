@@ -19,3 +19,8 @@ html[data-light-switch="flip"] :is(img, video, canvas, iframe, embed, object, [d
   :is(img, video, canvas, iframe, embed, object, [data-light-switch-media]) {
   filter: none !important;
 }
+
+/* Inside an area kept in its original colours, parts painted the page's own colour still follow the page. */
+html[data-light-switch="flip"] [data-light-switch-media] [data-light-switch-page] {
+  filter: invert(1) hue-rotate(180deg) !important;
+}
