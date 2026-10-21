@@ -1,5 +1,8 @@
 A small browser extension for Chrome and Arc that lets you switch **any website** between light and dark mode, including sites that only offer one, without (hopefully!) distorting photos, videos or charts.
 
+https://github.com/user-attachments/assets/c0c7c28c-059f-4cc7-89c0-8e15126a34ad
+
+[Featured bop!](https://www.youtube.com/watch?v=WFsAon_TWPQ&list=RDWFsAon_TWPQ&start_radio=1)
 
 ## What it does
 
