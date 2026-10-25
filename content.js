@@ -1,7 +1,8 @@
 // Light Switch: runs inside every page you visit.
 //
-// For each website you can pick Auto, Off, Dark or Light (saved per site).
-// Auto, the default, follows the browser's own dark/light setting. If the page already looks the way you asked, nothing changes. Otherwise
+// For each website you can pick Off, Dark or Light in the popup (saved per
+// site). Sites you haven't set follow the browser's own dark/light setting.
+// If the page already looks the way you asked, nothing changes. Otherwise
 // the page's colours are flipped (see switch.css), and photos, videos and
 // charts are flipped back so they keep their real colours.
 (() => {
@@ -9,7 +10,7 @@
   if (!host) return;
 
   const root = document.documentElement;
-  const MODE_KEY = `mode:${host}`; // 'auto' | 'off' | 'dark' | 'light', set by the popup
+  const MODE_KEY = `mode:${host}`; // 'off' | 'dark' | 'light', set by the popup
   const LOOK_KEY = `look:${host}`; // how the page looks on its own, remembered between visits
   const FLIP_ATTR = 'data-light-switch';
   const MEDIA_ATTR = 'data-light-switch-media'; // keep original colours
@@ -17,7 +18,7 @@
 
   const browserDark = matchMedia('(prefers-color-scheme: dark)');
 
-  let choice = 'auto'; // what's picked in the popup; 'auto' until the site is set
+  let choice = 'auto'; // what's picked in the popup, or 'auto' (follow the browser) if nothing yet
   let mode = 'off'; // what that means right now: 'off' | 'dark' | 'light'
   let look = null; // { dark: boolean, base: 'rgb(r, g, b)' }
   let flipped = false;
@@ -189,7 +190,7 @@
     setMode(choice === 'auto' ? (browserDark.matches ? 'dark' : 'light') : choice);
   }
 
-  // Auto follows the browser live, e.g. when macOS switches to dark in the evening.
+  // Unset sites follow the browser live, e.g. when macOS switches to dark in the evening.
   browserDark.addEventListener('change', () => {
     if (choice === 'auto') setChoice('auto');
   });
