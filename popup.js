@@ -1,5 +1,7 @@
 // The small window that opens from the toolbar icon. It saves the chosen
 // mode for the current site; content.js on that page picks the change up.
+// Sites you haven't set follow the browser's dark/light setting ('auto'); no
+// button is highlighted for them.
 const buttons = document.querySelectorAll('[data-mode]');
 const siteEl = document.getElementById('site');
 const hintEl = document.getElementById('hint');
@@ -15,11 +17,11 @@ function hint(text) {
 async function explain(tabId) {
   try {
     const s = await chrome.tabs.sendMessage(tabId, { type: 'light-switch:status' });
-    if (s.mode !== 'off' && !s.flipped && s.pageIsDark !== null) {
-      hint(`This site looks like it is already in ${s.mode} mode, so nothing needs changing.`);
-    } else {
-      hint('');
-    }
+    const already = s.mode !== 'off' && !s.flipped && s.pageIsDark !== null
+      ? `This site looks like it is already in ${s.mode} mode, so nothing needs changing.`
+      : '';
+    const auto = s.choice === 'auto' ? `Following your browser, which is set to ${s.mode} mode.` : '';
+    hint([auto, already].filter(Boolean).join(' '));
   } catch {
     // The page was open before the extension was installed or reloaded.
     hint('Reload this page once so Light Switch can work on it.');
@@ -45,7 +47,7 @@ async function init() {
   siteEl.textContent = host;
   const key = `mode:${host}`;
   const saved = await chrome.storage.local.get(key);
-  show(saved[key] ?? 'off');
+  show(saved[key] ?? 'auto');
 
   for (const b of buttons) {
     b.addEventListener('click', async () => {

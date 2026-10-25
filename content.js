@@ -1,7 +1,7 @@
 // Light Switch: runs inside every page you visit.
 //
-// For each website you can pick Off, Dark or Light (saved per site).
-// If the page already looks the way you asked, nothing changes. Otherwise
+// For each website you can pick Auto, Off, Dark or Light (saved per site).
+// Auto, the default, follows the browser's own dark/light setting. If the page already looks the way you asked, nothing changes. Otherwise
 // the page's colours are flipped (see switch.css), and photos, videos and
 // charts are flipped back so they keep their real colours.
 (() => {
@@ -9,13 +9,16 @@
   if (!host) return;
 
   const root = document.documentElement;
-  const MODE_KEY = `mode:${host}`; // 'off' | 'dark' | 'light', set by the popup
+  const MODE_KEY = `mode:${host}`; // 'auto' | 'off' | 'dark' | 'light', set by the popup
   const LOOK_KEY = `look:${host}`; // how the page looks on its own, remembered between visits
   const FLIP_ATTR = 'data-light-switch';
   const MEDIA_ATTR = 'data-light-switch-media'; // keep original colours
   const PAGE_ATTR = 'data-light-switch-page'; // inside a kept area, but follows the page
 
-  let mode = 'off';
+  const browserDark = matchMedia('(prefers-color-scheme: dark)');
+
+  let choice = 'auto'; // what's picked in the popup; 'auto' until the site is set
+  let mode = 'off'; // what that means right now: 'off' | 'dark' | 'light'
   let look = null; // { dark: boolean, base: 'rgb(r, g, b)' }
   let flipped = false;
   let loaded = document.readyState === 'complete';
@@ -181,23 +184,33 @@
     if (document.readyState !== 'loading') scan();
   }
 
+  function setChoice(next) {
+    choice = next;
+    setMode(choice === 'auto' ? (browserDark.matches ? 'dark' : 'light') : choice);
+  }
+
+  // Auto follows the browser live, e.g. when macOS switches to dark in the evening.
+  browserDark.addEventListener('change', () => {
+    if (choice === 'auto') setChoice('auto');
+  });
+
   document.addEventListener('DOMContentLoaded', scan, { once: true });
   addEventListener('load', () => { loaded = true; scan(); }, { once: true });
 
   // ---------- Talking to the popup ----------
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'local' && MODE_KEY in changes) setMode(changes[MODE_KEY].newValue ?? 'off');
+    if (area === 'local' && MODE_KEY in changes) setChoice(changes[MODE_KEY].newValue ?? 'auto');
   });
 
   chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
     if (msg?.type === 'light-switch:status') {
-      reply({ mode, flipped, pageIsDark: look ? look.dark : null });
+      reply({ choice, mode, flipped, pageIsDark: look ? look.dark : null });
     }
   });
 
   chrome.storage.local.get([MODE_KEY, LOOK_KEY]).then((saved) => {
     look = saved[LOOK_KEY] ?? null;
-    setMode(saved[MODE_KEY] ?? 'off');
+    setChoice(saved[MODE_KEY] ?? 'auto');
   });
 })();
